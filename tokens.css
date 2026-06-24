@@ -1,0 +1,25 @@
+/* Tokens de marca E.M. Compañía — sección 11 del Build Spec.
+   Fuente de verdad de color/tipografía para todo el front. */
+:root {
+  /* Fondos */
+  --em-bg:            #F2F3F6;
+  --em-bg-2:          #E8EAEF;
+  --em-bg-3:          #DFE1E8;
+
+  /* Texto */
+  --em-text:          #1D1E20;
+  --em-text-2:        #5F6368;
+  --em-text-3:        #9AA0A6;
+
+  /* Acento de marca */
+  --em-accent:        #CC3527;
+  --em-accent-sec:    #D74A3A;
+
+  /* Borde y foco */
+  --em-border:        rgba(218, 220, 224, 0.70); /* #DADCE0 @70% */
+  --em-focus:         #CC3527;
+
+  /* Tipografía (cargadas vía next/font) */
+  --em-font-title:    "Outfit", system-ui, sans-serif;
+  --em-font-body:     "DM Sans", system-ui, sans-serif;
+}
