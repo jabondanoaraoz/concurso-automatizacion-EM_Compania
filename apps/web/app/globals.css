@@ -1,0 +1,31 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Tokens de marca E.M. (sección 11). Fuente de verdad de color.
+   Réplica de /tokens.css en la raíz, embebida para el build de Next. */
+:root {
+  --em-bg: #f2f3f6;
+  --em-bg-2: #e8eaef;
+  --em-bg-3: #dfe1e8;
+
+  --em-text: #1d1e20;
+  --em-text-2: #5f6368;
+  --em-text-3: #9aa0a6;
+
+  --em-accent: #cc3527;
+  --em-accent-sec: #d74a3a;
+
+  --em-border: rgba(218, 220, 224, 0.7);
+  --em-focus: #cc3527;
+}
+
+body {
+  background: var(--em-bg);
+  color: var(--em-text);
+  font-family: var(--font-dmsans), system-ui, sans-serif;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-outfit), system-ui, sans-serif;
+}
