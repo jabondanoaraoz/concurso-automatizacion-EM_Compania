@@ -11,7 +11,8 @@ import type {
   WOResult,
   WOTercero,
 } from "./types";
-import { validateWOPayload, WOValidationError } from "./mapping";
+import { validateWOPayload } from "./mapping";
+import { WOValidationError } from "./errors";
 import type { WorldOfficeAdapter } from "./adapter";
 
 function baseUrl(): string {
