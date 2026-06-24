@@ -11,6 +11,8 @@ import type {
   WOResult,
   WOTercero,
 } from "./types";
+import { WorldOfficeMockAdapter } from "./mock";
+import { WorldOfficeLiveAdapter } from "./live";
 
 export interface WorldOfficeAdapter {
   authenticate(): Promise<string>; // JWT (12h), header "WO <token>"
@@ -21,11 +23,7 @@ export interface WorldOfficeAdapter {
 }
 
 export function getAdapter(): WorldOfficeAdapter {
-  // Import perezoso para evitar cargar el live (con fetch a WO) en modo mock.
-  if (process.env.WO_MODE === "live") {
-    const { WorldOfficeLiveAdapter } = require("./live") as typeof import("./live");
-    return new WorldOfficeLiveAdapter();
-  }
-  const { WorldOfficeMockAdapter } = require("./mock") as typeof import("./mock");
-  return new WorldOfficeMockAdapter();
+  return process.env.WO_MODE === "live"
+    ? new WorldOfficeLiveAdapter()
+    : new WorldOfficeMockAdapter();
 }
