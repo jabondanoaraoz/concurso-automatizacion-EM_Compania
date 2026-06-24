@@ -1,8 +1,12 @@
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { getSessionUser, rutaPorRol } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 
-// Landing temporal (verifica tokens + fuentes). Será reemplazada por el
-// login y el ruteo por rol en la tarea 1.4.
-export default function Home() {
+export default async function Home() {
+  const sesion = await getSessionUser();
+  if (sesion) redirect(rutaPorRol(sesion.perfil.rol));
+
   return (
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col justify-center gap-6 px-6">
       <div className="flex items-center gap-3">
@@ -14,8 +18,9 @@ export default function Home() {
         World Office Cloud. Acceso interno por rol: vendedor, contable y administrador.
       </p>
       <div className="flex gap-3">
-        <Button>Ingresar</Button>
-        <Button variant="outline">Conocer más</Button>
+        <Link href="/login">
+          <Button>Ingresar</Button>
+        </Link>
       </div>
       <p className="text-xs text-ink-3">
         Concurso Aztec · modo demostración (World Office en mock).
