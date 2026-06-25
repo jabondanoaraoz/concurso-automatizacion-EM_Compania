@@ -10,6 +10,7 @@ import {
 import { sincronizarPedidoWO } from "@/lib/pedidos/sync";
 import { enviarNotificacionPedido } from "@/lib/notificaciones/email";
 import { interpretarConsulta } from "@/lib/agente/interpretar";
+import { embedQuery } from "@/lib/agente/embeddings";
 
 const WO_MODE = (process.env.WO_MODE === "live" ? "live" : "mock") as "mock" | "live";
 
@@ -56,9 +57,26 @@ export async function sugerenciasAgente(query: string): Promise<SugerenciasResul
       // cae al intérprete in-app
     }
   }
+  const supabase = await createClient();
+
+  // Capa semántica: si hay key de embeddings, busca por SIGNIFICADO (vectorial).
+  const vec = await embedQuery(query);
+  if (vec) {
+    const { data } = await supabase.rpc("buscar_semantica", {
+      query_embedding: vec,
+      match_count: 10,
+    });
+    if (data && data.length > 0) {
+      return {
+        interpretado: `búsqueda semántica de “${query.trim()}”`,
+        candidatos: data as ResultadoBusqueda[],
+      };
+    }
+  }
+
+  // Respaldo léxico: intérprete por reglas + buscar_productos.
   const interpretado = interpretarConsulta(query);
   if (!interpretado) return { interpretado: "", candidatos: [] };
-  const supabase = await createClient();
   const { data } = await supabase.rpc("buscar_productos", { q: interpretado });
   return { interpretado, candidatos: (data ?? []) as ResultadoBusqueda[] };
 }
