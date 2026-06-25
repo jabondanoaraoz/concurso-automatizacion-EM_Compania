@@ -95,6 +95,37 @@ Marca cada caso: `[ ]` pendiente · `[x]` OK · `[!]` falló (anota qué pasó p
 
 ---
 
+# MODO C — Entregables: documentos, estructura y repo
+
+> Validar que los entregables existen, están completos y **coinciden con lo implementado**.
+
+## C1. Documentos (leer y validar contenido)
+- [ ] **C1.1** `docs/integracion-world-office.md` (**el que más pesa**) — verificar que tenga: estado de la API WO, **mapeo campo a campo** (tabla Supabase→WO con el error que blinda cada campo), 12 errores documentados, **idempotencia** (consecutivo + idempotency_key), ciclo de token (JWT 12h), pasos de cableado en go-live (reconciliación de IDs), tabla "qué es real / qué es mock", checklist de go-live. Que coincida con `apps/web/lib/worldoffice/`.
+- [ ] **C1.2** `docs/manual-onboarding.md` — guía no técnica con los 7 puntos (qué es, login, guía por rol vendedor/contable/admin, qué pasa "por debajo" con WO, FAQ).
+- [ ] **C1.3** `docs/PREGUNTAS-CLIENTE.md` — supuestos abiertos (URL del tenant, nombre del `documentoTipo`, descuento por renglón vs documento, inventario por producto vs lote).
+- [ ] **C1.4** `README.md` — pitch, stack, estructura, cómo correr, **tabla real/mock**, links a los docs.
+- [ ] **C1.5** `n8n/README.md` — import de los 4 flujos + variables.
+- [ ] **C1.6** `CLAUDE.md` — contexto del proyecto (stack, 3 capas, 6 reglas no negociables).
+- [ ] **C1.7** `docs/GUIA-PRUEBAS.md` — esta guía.
+
+## C2. Estructura del repo (sección 15 del spec)
+- [ ] **C2.1** El árbol coincide: `apps/web/` · `supabase/{migrations,seed}/` · `n8n/workflows/` · `docs/` · `tokens.css` · `README.md` · `EM-Pedidos_Build-Spec.md`.
+
+## C3. Repo en GitHub
+**URL:** https://github.com/jabondanoaraoz/concurso-automatizacion-EM_Compania
+- [ ] **C3.1** Abrir el repo → ~72 archivos, ~22 commits, **auto-deploy en cada push** (conectado a Vercel).
+- [ ] **C3.2** **NO hay secretos**: ningún `.env` real, `service_role`, App Password ni API keys. Solo `.env.example` con placeholders. *(Verificado: `git ls-files` no lista nada privado.)*
+- [ ] **C3.3** **5 migraciones SQL** (`0001`–`0005`) reflejan la base aplicada.
+- [ ] **C3.4** **4 workflows n8n** exportados como JSON en `n8n/workflows/`.
+- [ ] **C3.5** Commits **a nombre del usuario** (sin `Co-Authored-By`).
+
+## C4. Base de datos (Supabase → dashboard)
+**Proyecto ref:** `pxqqxevxybgicnxtbzzb`
+- [ ] **C4.1** Table Editor: **9 tablas**, **150 productos** (con `embedding` poblado), **5 clientes**, **3 usuarios**, fila `empresa`.
+- [ ] **C4.2** Authentication → Policies: **RLS activo** en las 9 tablas.
+
+---
+
 # Evidencia para el jurado (criterios del concurso)
 
 Al probar, ten presente **dónde se demuestra cada criterio**:
