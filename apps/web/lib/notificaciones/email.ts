@@ -131,8 +131,29 @@ export async function enviarNotificacionPedido(
   const correo = await componerCorreoPedido(pedidoId);
   if (!correo) return { ok: false, error: "Pedido no encontrado." };
 
-  // Envío vía Composio Gmail. Requiere COMPOSIO_API_KEY. Si no está, se omite
-  // (el envío autónomo de la demo local lo opera n8n por SMTP).
+  // 1) SMTP (nodemailer) — usado por la app en Vercel. Sin depender de n8n ni Composio.
+  if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+    try {
+      const nodemailer = await import("nodemailer");
+      const transport = nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: Number(process.env.SMTP_PORT ?? 465),
+        secure: (process.env.SMTP_SECURE ?? "true") === "true",
+        auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+      });
+      await transport.sendMail({
+        from: process.env.SMTP_USER,
+        to: correo.to,
+        subject: correo.subject,
+        html: correo.html,
+      });
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: e instanceof Error ? e.message : "SMTP error" };
+    }
+  }
+
+  // 2) Composio Gmail (fallback). Requiere COMPOSIO_API_KEY. Si no está, se omite.
   const apiKey = process.env.COMPOSIO_API_KEY;
   if (!apiKey) return { ok: false, skipped: true };
 
