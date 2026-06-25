@@ -1,0 +1,157 @@
+{
+  "name": "EM-Pedidos · crearPedido (camino crítico)",
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "nodes": [
+    {
+      "id": "webhook",
+      "name": "Webhook pedido",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [240, 300],
+      "parameters": { "httpMethod": "POST", "path": "crear-pedido", "responseMode": "onReceived", "options": {} },
+      "webhookId": "crear-pedido"
+    },
+    {
+      "id": "leer",
+      "name": "Leer pedido",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [460, 300],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/pedidos?select=id,wo_payload,prefijo,consecutivo&id=eq.{{ $json.body.pedido_id }}",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [
+          { "name": "apikey", "value": "={{ $env.SUPABASE_SERVICE_KEY }}" },
+          { "name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_KEY }}" }
+        ] },
+        "options": { "response": { "response": { "neverError": true } } }
+      },
+      "retryOnFail": true, "maxTries": 3, "waitBetweenTries": 3000
+    },
+    {
+      "id": "wo",
+      "name": "Crear en WO",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [680, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.APP_URL }}/api/worldoffice/crear-pedido",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [ { "name": "x-n8n-secret", "value": "={{ $env.N8N_SHARED_SECRET }}" } ] },
+        "sendBody": true, "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ payload: $json.wo_payload }) }}",
+        "options": { "response": { "response": { "neverError": true } } }
+      },
+      "retryOnFail": true, "maxTries": 3, "waitBetweenTries": 5000
+    },
+    {
+      "id": "if",
+      "name": "¿Éxito?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [900, 300],
+      "parameters": { "conditions": {
+        "options": { "version": 2, "caseSensitive": true, "typeValidation": "loose", "leftValue": "" },
+        "combinator": "and",
+        "conditions": [ { "leftValue": "={{ $json.ok }}", "rightValue": true, "operator": { "type": "boolean", "operation": "true", "singleValue": true } } ]
+      } }
+    },
+    {
+      "id": "ok_estado",
+      "name": "Marcar sincronizado",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [1140, 200],
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/pedidos?id=eq.{{ $('Webhook pedido').item.json.body.pedido_id }}",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [
+          { "name": "apikey", "value": "={{ $env.SUPABASE_SERVICE_KEY }}" },
+          { "name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_KEY }}" },
+          { "name": "Content-Type", "value": "application/json" },
+          { "name": "Prefer", "value": "return=minimal" }
+        ] },
+        "sendBody": true, "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ estado: 'sincronizado_wo', numero_wo: $json.numero, synced_at: new Date().toISOString(), wo_response: $json.raw }) }}",
+        "options": {}
+      },
+      "retryOnFail": true, "maxTries": 3, "waitBetweenTries": 3000
+    },
+    {
+      "id": "ok_notif",
+      "name": "Notificar contabilidad",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [1360, 200],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.APP_URL }}/api/notificaciones/pedido",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [ { "name": "x-n8n-secret", "value": "={{ $env.N8N_SHARED_SECRET }}" } ] },
+        "sendBody": true, "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ pedido_id: $('Webhook pedido').item.json.body.pedido_id }) }}",
+        "options": {}
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "err_estado",
+      "name": "Marcar pendiente_sync",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [1140, 420],
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/pedidos?id=eq.{{ $('Webhook pedido').item.json.body.pedido_id }}",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [
+          { "name": "apikey", "value": "={{ $env.SUPABASE_SERVICE_KEY }}" },
+          { "name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_KEY }}" },
+          { "name": "Content-Type", "value": "application/json" },
+          { "name": "Prefer", "value": "return=minimal" }
+        ] },
+        "sendBody": true, "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ estado: 'pendiente_sync', wo_response: { errorCode: $json.errorCode, moreInfo: $json.moreInfo } }) }}",
+        "options": {}
+      },
+      "retryOnFail": true, "maxTries": 3, "waitBetweenTries": 3000
+    },
+    {
+      "id": "err_log",
+      "name": "Registrar sync_log",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [1360, 420],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/sync_logs",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [
+          { "name": "apikey", "value": "={{ $env.SUPABASE_SERVICE_KEY }}" },
+          { "name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_KEY }}" },
+          { "name": "Content-Type", "value": "application/json" },
+          { "name": "Prefer", "value": "return=minimal" }
+        ] },
+        "sendBody": true, "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ pedido_id: $('Webhook pedido').item.json.body.pedido_id, intento: 1, status: 'error', error_code: $json.errorCode, error_more_info: $json.moreInfo, response: $json }) }}",
+        "options": {}
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Webhook pedido": { "main": [[{ "node": "Leer pedido", "type": "main", "index": 0 }]] },
+    "Leer pedido": { "main": [[{ "node": "Crear en WO", "type": "main", "index": 0 }]] },
+    "Crear en WO": { "main": [[{ "node": "¿Éxito?", "type": "main", "index": 0 }]] },
+    "¿Éxito?": { "main": [
+      [{ "node": "Marcar sincronizado", "type": "main", "index": 0 }],
+      [{ "node": "Marcar pendiente_sync", "type": "main", "index": 0 }]
+    ] },
+    "Marcar sincronizado": { "main": [[{ "node": "Notificar contabilidad", "type": "main", "index": 0 }]] },
+    "Marcar pendiente_sync": { "main": [[{ "node": "Registrar sync_log", "type": "main", "index": 0 }]] }
+  }
+}

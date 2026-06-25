@@ -1,0 +1,35 @@
+{
+  "name": "EM-Pedidos · refreshToken (solo live)",
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "nodes": [
+    {
+      "id": "cron",
+      "name": "Cada 11 horas",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [260, 300],
+      "parameters": { "rule": { "interval": [{ "field": "hours", "hoursInterval": 11 }] } }
+    },
+    {
+      "id": "token",
+      "name": "Obtener token WO",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [500, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.WO_BASE_URL }}/gestionarTokenAPILicencia",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "text/plain",
+        "body": "={{ $env.WO_CORREO_REGISTRADO }}",
+        "options": {}
+      },
+      "notes": "Devuelve JWT (12h). En go-live, guardar cifrado (secret de n8n / tabla de config). Header de uso: Authorization: WO <token>."
+    }
+  ],
+  "connections": {
+    "Cada 11 horas": { "main": [[{ "node": "Obtener token WO", "type": "main", "index": 0 }]] }
+  }
+}

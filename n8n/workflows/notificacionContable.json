@@ -1,0 +1,37 @@
+{
+  "name": "EM-Pedidos · notificacionContable (sub-flujo Gmail)",
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "nodes": [
+    {
+      "id": "wh",
+      "name": "Webhook notificar",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [260, 300],
+      "parameters": { "httpMethod": "POST", "path": "notificacion-contable", "responseMode": "onReceived", "options": {} },
+      "webhookId": "notificacion-contable"
+    },
+    {
+      "id": "send",
+      "name": "Enviar correo (app + Composio)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [500, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.APP_URL }}/api/notificaciones/pedido",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [ { "name": "x-n8n-secret", "value": "={{ $env.N8N_SHARED_SECRET }}" } ] },
+        "sendBody": true, "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ pedido_id: $json.body.pedido_id }) }}",
+        "options": {}
+      },
+      "retryOnFail": true, "maxTries": 3, "waitBetweenTries": 3000,
+      "notes": "Reusa el composer de la app (cero divergencia). El envío real lo hace Composio Gmail."
+    }
+  ],
+  "connections": {
+    "Webhook notificar": { "main": [[{ "node": "Enviar correo (app + Composio)", "type": "main", "index": 0 }]] }
+  }
+}

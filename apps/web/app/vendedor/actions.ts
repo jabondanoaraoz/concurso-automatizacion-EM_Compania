@@ -205,11 +205,21 @@ export async function confirmarPedido(
     }))
   );
 
-  // 6) Sincronizar con WO (mock). En Fase 2 esto lo dispara n8n vía webhook.
-  const sync = await sincronizarPedidoWO(pedido.id);
+  // 6) Camino crítico. Si n8n está configurado, delega allá (diseño del spec:
+  //    el pedido nuevo dispara el flujo crearPedido en n8n). Si no, in-app.
+  const n8nUrl = process.env.N8N_WEBHOOK_CREAR_PEDIDO;
+  if (n8nUrl) {
+    await fetch(n8nUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pedido_id: pedido.id }),
+    }).catch(() => undefined);
+    revalidatePath("/vendedor");
+    return { ok: true, pedidoId: pedido.id, numero: `${prefijo}-${numero}`, estado: "confirmado" };
+  }
 
-  // 7) Notificar a contabilidad (best-effort). En Fase 2.4 lo opera n8n.
-  await enviarNotificacionPedido(pedido.id).catch(() => undefined);
+  const sync = await sincronizarPedidoWO(pedido.id);
+  await enviarNotificacionPedido(pedido.id).catch(() => undefined); // best-effort
 
   revalidatePath("/vendedor");
   return {

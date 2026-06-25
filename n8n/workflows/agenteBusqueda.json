@@ -1,0 +1,62 @@
+{
+  "name": "EM-Pedidos · agenteBusqueda (solo sugiere)",
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "nodes": [
+    {
+      "id": "wh",
+      "name": "Webhook consulta",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [240, 300],
+      "parameters": { "httpMethod": "POST", "path": "agente-busqueda", "responseMode": "responseNode", "options": {} },
+      "webhookId": "agente-busqueda",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "norm",
+      "name": "Normalizar (placeholder LLM)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Placeholder de normalización. Aquí va el nodo LLM que interpreta consultas\n// ambiguas (ej. 'sello 7/8 res corto') y normaliza términos. Solo SUGIERE.\nconst q = (($json.body && $json.body.query) || '').toString().trim();\nreturn [{ json: { q } }];"
+      }
+    },
+    {
+      "id": "rpc",
+      "name": "Buscar en Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [680, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/rpc/buscar_productos",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [
+          { "name": "apikey", "value": "={{ $env.SUPABASE_SERVICE_KEY }}" },
+          { "name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_KEY }}" },
+          { "name": "Content-Type", "value": "application/json" }
+        ] },
+        "sendBody": true, "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ q: $json.q }) }}",
+        "options": {}
+      },
+      "retryOnFail": true, "maxTries": 2, "waitBetweenTries": 2000
+    },
+    {
+      "id": "resp",
+      "name": "Responder candidatos",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [900, 300],
+      "parameters": { "respondWith": "json", "responseBody": "={{ JSON.stringify({ candidatos: $json }) }}", "options": {} }
+    }
+  ],
+  "connections": {
+    "Webhook consulta": { "main": [[{ "node": "Normalizar (placeholder LLM)", "type": "main", "index": 0 }]] },
+    "Normalizar (placeholder LLM)": { "main": [[{ "node": "Buscar en Supabase", "type": "main", "index": 0 }]] },
+    "Buscar en Supabase": { "main": [[{ "node": "Responder candidatos", "type": "main", "index": 0 }]] }
+  }
+}
