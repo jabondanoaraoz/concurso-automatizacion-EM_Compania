@@ -28,7 +28,7 @@
       "id": "rpc",
       "name": "Buscar en Supabase",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
+      "typeVersion": 4.3,
       "position": [680, 300],
       "parameters": {
         "method": "POST",

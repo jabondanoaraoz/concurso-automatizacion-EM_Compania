@@ -16,7 +16,7 @@
       "id": "leer",
       "name": "Leer pedido",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
+      "typeVersion": 4.3,
       "position": [460, 300],
       "parameters": {
         "method": "GET",
@@ -34,7 +34,7 @@
       "id": "wo",
       "name": "Crear en WO",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
+      "typeVersion": 4.3,
       "position": [680, 300],
       "parameters": {
         "method": "POST",
@@ -63,7 +63,7 @@
       "id": "ok_estado",
       "name": "Marcar sincronizado",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
+      "typeVersion": 4.3,
       "position": [1140, 200],
       "parameters": {
         "method": "PATCH",
@@ -85,7 +85,7 @@
       "id": "ok_notif",
       "name": "Notificar contabilidad",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
+      "typeVersion": 4.3,
       "position": [1360, 200],
       "parameters": {
         "method": "POST",
@@ -102,7 +102,7 @@
       "id": "err_estado",
       "name": "Marcar pendiente_sync",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
+      "typeVersion": 4.3,
       "position": [1140, 420],
       "parameters": {
         "method": "PATCH",
@@ -124,7 +124,7 @@
       "id": "err_log",
       "name": "Registrar sync_log",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
+      "typeVersion": 4.3,
       "position": [1360, 420],
       "parameters": {
         "method": "POST",
