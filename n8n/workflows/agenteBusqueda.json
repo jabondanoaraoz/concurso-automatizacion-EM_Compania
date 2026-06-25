@@ -51,7 +51,7 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
       "position": [900, 300],
-      "parameters": { "respondWith": "json", "responseBody": "={{ JSON.stringify({ candidatos: $json }) }}", "options": {} }
+      "parameters": { "respondWith": "json", "responseBody": "={{ JSON.stringify({ candidatos: $input.all().map(i => i.json) }) }}", "options": {} }
     }
   ],
   "connections": {
