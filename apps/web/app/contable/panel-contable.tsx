@@ -194,6 +194,12 @@ export function PanelContable({
           <div className="mt-4 flex flex-wrap gap-2">
             <Button
               size="sm"
+              onClick={() => window.open(`/api/pedidos/${sel.id}/pdf`, "_blank")}
+            >
+              Descargar PDF
+            </Button>
+            <Button
+              size="sm"
               variant="outline"
               onClick={() =>
                 descargar(

@@ -51,12 +51,13 @@ export default async function VendedorHome() {
                 <th className="px-4 py-2 font-medium">Estado</th>
                 <th className="px-4 py-2 font-medium">Número WO</th>
                 <th className="px-4 py-2 text-right font-medium">Total</th>
+                <th className="px-4 py-2"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {(pedidos ?? []).length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-4 py-4 text-ink-3">
+                  <td colSpan={5} className="px-4 py-4 text-ink-3">
                     Aún no has confirmado pedidos.
                   </td>
                 </tr>
@@ -73,6 +74,15 @@ export default async function VendedorHome() {
                     </td>
                     <td className="px-4 py-2 text-ink-2">{p.numero_wo ?? "—"}</td>
                     <td className="px-4 py-2 text-right">{cop.format(Number(p.total))}</td>
+                    <td className="px-4 py-2 text-right">
+                      <a
+                        href={`/api/pedidos/${p.id}/pdf`}
+                        target="_blank"
+                        className="text-accent hover:underline"
+                      >
+                        PDF
+                      </a>
+                    </td>
                   </tr>
                 ))
               )}
