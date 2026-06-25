@@ -86,10 +86,9 @@ export function construirCorreoPedido(d: DatosCorreoPedido): CorreoPedido {
   return { to: DESTINO, subject: `Nuevo pedido ${numero} — ${d.clienteNombre}`, html };
 }
 
-// Carga el pedido y dispara el correo. Best-effort: nunca rompe el flujo del pedido.
-export async function enviarNotificacionPedido(
-  pedidoId: string
-): Promise<{ ok: boolean; skipped?: boolean; error?: string }> {
+// Carga el pedido y COMPONE el correo (sin enviar). Reusado por el endpoint que
+// consume n8n (SMTP) y por el envío vía Composio — cero divergencia de contenido.
+export async function componerCorreoPedido(pedidoId: string): Promise<CorreoPedido | null> {
   const admin = createAdminClient();
   const { data: pedido } = await admin
     .from("pedidos")
@@ -98,7 +97,7 @@ export async function enviarNotificacionPedido(
     )
     .eq("id", pedidoId)
     .single();
-  if (!pedido) return { ok: false, error: "Pedido no encontrado." };
+  if (!pedido) return null;
 
   const p = pedido as unknown as {
     prefijo: string;
@@ -110,7 +109,7 @@ export async function enviarNotificacionPedido(
     pedido_items: { descripcion_snapshot: string; cantidad: number; total_linea: number }[];
   };
 
-  const correo = construirCorreoPedido({
+  return construirCorreoPedido({
     prefijo: p.prefijo,
     consecutivo: p.consecutivo,
     clienteNombre: p.cliente?.nombre ?? "—",
@@ -123,9 +122,17 @@ export async function enviarNotificacionPedido(
       total_linea: Number(i.total_linea),
     })),
   });
+}
+
+// Carga el pedido y dispara el correo vía Composio. Best-effort: nunca rompe el flujo.
+export async function enviarNotificacionPedido(
+  pedidoId: string
+): Promise<{ ok: boolean; skipped?: boolean; error?: string }> {
+  const correo = await componerCorreoPedido(pedidoId);
+  if (!correo) return { ok: false, error: "Pedido no encontrado." };
 
   // Envío vía Composio Gmail. Requiere COMPOSIO_API_KEY. Si no está, se omite
-  // (en Fase 2.4 el envío autónomo lo opera n8n vía Composio).
+  // (el envío autónomo de la demo local lo opera n8n por SMTP).
   const apiKey = process.env.COMPOSIO_API_KEY;
   if (!apiKey) return { ok: false, skipped: true };
 
