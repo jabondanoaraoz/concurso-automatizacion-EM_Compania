@@ -1,11 +1,32 @@
-export default function AdminHome() {
+import { createClient } from "@/lib/supabase/server";
+import { listarCatalogo } from "./actions";
+import {
+  AdminPanel,
+  type UsuarioRow,
+  type ClienteRow,
+  type EmpresaCfg,
+} from "./admin-panel";
+
+export default async function AdminHome() {
+  const supabase = await createClient();
+
+  const [{ data: usuarios }, { data: empresa }, { data: clientes }, catalogo] =
+    await Promise.all([
+      supabase.from("usuarios").select("id, nombre, email, rol, activo").order("rol"),
+      supabase
+        .from("empresa")
+        .select("prefijo_pedido, forma_pago_default, moneda, bodega_default, centro_costo_default")
+        .single(),
+      supabase.from("clientes").select("id, nombre, nit, descuento_pct").order("nombre"),
+      listarCatalogo(""),
+    ]);
+
   return (
-    <div>
-      <h1 className="font-title text-2xl font-semibold">Panel de administración</h1>
-      <p className="mt-2 text-ink-2">
-        Gestión de usuarios (vendedores y contables), parámetros de empresa,
-        catálogo y descuentos por cliente. (En construcción.)
-      </p>
-    </div>
+    <AdminPanel
+      usuarios={(usuarios ?? []) as UsuarioRow[]}
+      empresa={empresa as EmpresaCfg}
+      clientes={(clientes ?? []) as ClienteRow[]}
+      catalogo={catalogo}
+    />
   );
 }
