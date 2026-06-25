@@ -8,6 +8,7 @@ import {
   type PedidoWOInput,
 } from "@/lib/worldoffice/mapping";
 import { sincronizarPedidoWO } from "@/lib/pedidos/sync";
+import { enviarNotificacionPedido } from "@/lib/notificaciones/email";
 
 const WO_MODE = (process.env.WO_MODE === "live" ? "live" : "mock") as "mock" | "live";
 
@@ -206,6 +207,9 @@ export async function confirmarPedido(
 
   // 6) Sincronizar con WO (mock). En Fase 2 esto lo dispara n8n vía webhook.
   const sync = await sincronizarPedidoWO(pedido.id);
+
+  // 7) Notificar a contabilidad (best-effort). En Fase 2.4 lo opera n8n.
+  await enviarNotificacionPedido(pedido.id).catch(() => undefined);
 
   revalidatePath("/vendedor");
   return {
