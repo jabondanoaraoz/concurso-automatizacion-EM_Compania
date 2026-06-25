@@ -5,8 +5,10 @@ import { Button } from "@/components/ui/button";
 import {
   buscarProductos,
   confirmarPedido,
+  sugerenciasAgente,
   type ResultadoBusqueda,
   type ConfirmarResultado,
+  type SugerenciasResultado,
 } from "./actions";
 
 export interface ClienteOpcion {
@@ -33,8 +35,15 @@ export function Cotizador({ clientes }: { clientes: ClienteOpcion[] }) {
   const [resultados, setResultados] = useState<ResultadoBusqueda[]>([]);
   const [carrito, setCarrito] = useState<LineaCarrito[]>([]);
   const [resultado, setResultado] = useState<ConfirmarResultado | null>(null);
+  const [sug, setSug] = useState<SugerenciasResultado | null>(null);
   const [buscando, startBuscar] = useTransition();
+  const [pensando, startAgente] = useTransition();
   const [confirmando, startConfirmar] = useTransition();
+
+  function asistente() {
+    if (!query.trim()) return;
+    startAgente(async () => setSug(await sugerenciasAgente(query)));
+  }
 
   function onCliente(id: string) {
     setClienteId(id);
@@ -125,12 +134,17 @@ export function Cotizador({ clientes }: { clientes: ClienteOpcion[] }) {
           <label className="mb-1 block text-sm text-ink-2">
             Buscar producto (código o descripción)
           </label>
-          <input
-            value={query}
-            onChange={(e) => onBuscar(e.target.value)}
-            placeholder='Ej: 0100012  ·  "sello 7/8 resorte corto"  ·  "capacitor 35 uf"'
-            className="w-full rounded-md border border-border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-focus"
-          />
+          <div className="flex gap-2">
+            <input
+              value={query}
+              onChange={(e) => onBuscar(e.target.value)}
+              placeholder='Ej: 0100012  ·  "sello 7/8 res corto"  ·  "cap 35 uf"'
+              className="w-full rounded-md border border-border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-focus"
+            />
+            <Button variant="outline" onClick={asistente} disabled={pensando || !query.trim()}>
+              {pensando ? "…" : "Asistente"}
+            </Button>
+          </div>
           <div className="mt-3 max-h-80 divide-y divide-border overflow-auto">
             {buscando && <p className="py-2 text-sm text-ink-3">Buscando…</p>}
             {!buscando && query && resultados.length === 0 && (
@@ -151,6 +165,41 @@ export function Cotizador({ clientes }: { clientes: ClienteOpcion[] }) {
             ))}
           </div>
         </div>
+
+        {sug && (
+          <div className="rounded-xl border border-accent/40 bg-white p-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-medium text-accent">Sugerencias del asistente</h3>
+              <button onClick={() => setSug(null)} className="text-ink-3 hover:text-accent" aria-label="Cerrar">
+                ✕
+              </button>
+            </div>
+            {sug.interpretado && (
+              <p className="mt-1 text-xs text-ink-3">
+                Interpreté tu consulta como: <span className="text-ink-2">“{sug.interpretado}”</span>
+              </p>
+            )}
+            <div className="mt-2 max-h-72 divide-y divide-border overflow-auto">
+              {sug.candidatos.length === 0 ? (
+                <p className="py-2 text-sm text-ink-3">Sin sugerencias.</p>
+              ) : (
+                sug.candidatos.map((p) => (
+                  <div key={p.id} className="flex items-center justify-between gap-3 py-2">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">{p.descripcion}</p>
+                      <p className="text-xs text-ink-3">
+                        {p.codigo_interno} · {cop.format(Number(p.precio_lista))} · stock {p.stock}
+                      </p>
+                    </div>
+                    <Button size="sm" variant="outline" onClick={() => agregar(p)}>
+                      Agregar
+                    </Button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
       </section>
 
       {/* Columna derecha: carrito + totales + confirmar */}

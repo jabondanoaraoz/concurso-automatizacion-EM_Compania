@@ -9,6 +9,7 @@ import {
 } from "@/lib/worldoffice/mapping";
 import { sincronizarPedidoWO } from "@/lib/pedidos/sync";
 import { enviarNotificacionPedido } from "@/lib/notificaciones/email";
+import { interpretarConsulta } from "@/lib/agente/interpretar";
 
 const WO_MODE = (process.env.WO_MODE === "live" ? "live" : "mock") as "mock" | "live";
 
@@ -30,6 +31,36 @@ export async function buscarProductos(q: string): Promise<ResultadoBusqueda[]> {
   const { data, error } = await supabase.rpc("buscar_productos", { q: termino });
   if (error) return [];
   return (data ?? []) as ResultadoBusqueda[];
+}
+
+export interface SugerenciasResultado {
+  interpretado: string;
+  candidatos: ResultadoBusqueda[];
+}
+
+// Agente de búsqueda: reinterpreta la consulta y devuelve candidatos. SOLO SUGIERE.
+// Si N8N_WEBHOOK_AGENTE_BUSQUEDA está configurado, delega al flujo n8n (LLM+vector);
+// si no, usa el intérprete determinista in-app + buscar_productos.
+export async function sugerenciasAgente(query: string): Promise<SugerenciasResultado> {
+  const n8nUrl = process.env.N8N_WEBHOOK_AGENTE_BUSQUEDA;
+  if (n8nUrl) {
+    try {
+      const res = await fetch(n8nUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query }),
+      });
+      const data = (await res.json()) as { candidatos?: ResultadoBusqueda[] };
+      return { interpretado: query, candidatos: data.candidatos ?? [] };
+    } catch {
+      // cae al intérprete in-app
+    }
+  }
+  const interpretado = interpretarConsulta(query);
+  if (!interpretado) return { interpretado: "", candidatos: [] };
+  const supabase = await createClient();
+  const { data } = await supabase.rpc("buscar_productos", { q: interpretado });
+  return { interpretado, candidatos: (data ?? []) as ResultadoBusqueda[] };
 }
 
 export interface ItemInput {
