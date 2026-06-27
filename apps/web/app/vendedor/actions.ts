@@ -2,11 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import {
-  buildWOPayload,
-  idempotencyKey,
-  type PedidoWOInput,
-} from "@/lib/worldoffice/mapping";
+import { buildWOPayload, type PedidoWOInput } from "@/lib/worldoffice/mapping";
 import { sincronizarPedidoWO } from "@/lib/pedidos/sync";
 import { enviarNotificacionPedido } from "@/lib/notificaciones/email";
 import { interpretarConsulta } from "@/lib/agente/interpretar";
@@ -68,7 +64,7 @@ export async function sugerenciasAgente(query: string): Promise<SugerenciasResul
     });
     if (data && data.length > 0) {
       return {
-        interpretado: `búsqueda semántica de “${query.trim()}”`,
+        interpretado: `búsqueda semántica de ${query.trim()}`,
         candidatos: data as ResultadoBusqueda[],
       };
     }
@@ -152,15 +148,13 @@ export async function confirmarPedido(
   });
   const subtotal = lineas.reduce((s, l) => s + l.cantidad * l.valor, 0);
   const total = lineas.reduce((s, l) => s + l.totalLinea, 0);
+  if (!(total > 0))
+    return { ok: false, error: "El total del pedido debe ser mayor a cero." };
 
-  // 3) Consecutivo atómico (sostiene la idempotencia).
-  const { data: consecutivo, error: errCons } = await supabase.rpc("siguiente_consecutivo");
-  if (errCons || consecutivo == null)
-    return { ok: false, error: "No se pudo reservar el consecutivo." };
   const prefijo = empresa.prefijo_pedido as string;
-  const numero = String(consecutivo);
 
-  // 4) Construir payload WO (mismo mapeo que el camino crítico) + idempotency_key.
+  // 3) Construir payload WO (mismo mapeo que el camino crítico). El `numero` va
+  //    como placeholder: la función atómica le pone el consecutivo real.
   const woInput: PedidoWOInput = {
     empresa: {
       woIdEmpresa: empresa.wo_id_empresa ?? null,
@@ -176,7 +170,7 @@ export async function confirmarPedido(
       descuentoPct: desc,
     },
     prefijo,
-    numero,
+    numero: "",
     fecha: new Date().toISOString().slice(0, 10),
     renglones: lineas.map((l) => ({
       woIdInventario: l.p.wo_id_inventario ?? null,
@@ -189,70 +183,41 @@ export async function confirmarPedido(
     })),
   };
   const payload = buildWOPayload(woInput, WO_MODE);
-  const idemKey = idempotencyKey(payload);
 
-  // 5) Persistir cotización + pedido + items (snapshots).
-  const { data: coti, error: errCoti } = await supabase
-    .from("cotizaciones")
-    .insert({
-      vendedor_id: user.id,
-      cliente_id: input.clienteId,
-      estado: "convertida",
-      descuento_pct: desc,
-      subtotal,
-      total,
-    })
-    .select("id")
-    .single();
-  if (errCoti || !coti) return { ok: false, error: "No se pudo crear la cotización." };
+  // Snapshots inmutables de cada línea para la función atómica.
+  const itemsSnapshot = lineas.map((l) => ({
+    producto_id: l.p.id,
+    descripcion: l.p.descripcion,
+    codigo_interno: l.p.codigo_interno,
+    codigo_contable: l.p.codigo_contable,
+    wo_id_inventario: l.p.wo_id_inventario ?? "",
+    cantidad: l.cantidad,
+    valor_unitario: l.valor,
+    total_linea: l.totalLinea,
+  }));
 
-  await supabase.from("cotizacion_items").insert(
-    lineas.map((l) => ({
-      cotizacion_id: coti.id,
-      producto_id: l.p.id,
-      descripcion_snapshot: l.p.descripcion,
-      codigo_interno_snapshot: l.p.codigo_interno,
-      codigo_contable_snapshot: l.p.codigo_contable,
-      wo_id_inventario_snapshot: l.p.wo_id_inventario ?? null,
-      cantidad: l.cantidad,
-      valor_unitario: l.valor,
-      descuento_pct: desc,
-      total_linea: l.totalLinea,
-    }))
-  );
+  // 4) Creación ATÓMICA: consecutivo + cotización + items + pedido + items en
+  //    UNA transacción (RPC crear_pedido_atomico). Si algo falla, el rollback
+  //    revierte también el consecutivo → no quedan huecos en la numeración. El
+  //    numero real y la idempotency_key se derivan dentro de la función. Un
+  //    reintento cubre fallos transitorios (p. ej. 503) sin riesgo de duplicar.
+  let creado: { pedido_id: string; consecutivo: number } | null = null;
+  for (let intento = 0; intento < 2 && !creado; intento++) {
+    const { data, error } = await supabase.rpc("crear_pedido_atomico", {
+      p_cliente: input.clienteId,
+      p_descuento: desc,
+      p_subtotal: subtotal,
+      p_total: total,
+      p_wo_payload: payload,
+      p_items: itemsSnapshot,
+    });
+    if (!error && data) creado = data as { pedido_id: string; consecutivo: number };
+  }
+  if (!creado)
+    return { ok: false, error: "No se pudo crear el pedido. Vuelve a intentar." };
 
-  const { data: pedido, error: errPed } = await supabase
-    .from("pedidos")
-    .insert({
-      cotizacion_id: coti.id,
-      vendedor_id: user.id,
-      cliente_id: input.clienteId,
-      prefijo,
-      consecutivo,
-      estado: "confirmado",
-      idempotency_key: idemKey,
-      wo_payload: payload,
-      subtotal,
-      total,
-    })
-    .select("id")
-    .single();
-  if (errPed || !pedido) return { ok: false, error: "No se pudo crear el pedido." };
-
-  await supabase.from("pedido_items").insert(
-    lineas.map((l) => ({
-      pedido_id: pedido.id,
-      producto_id: l.p.id,
-      descripcion_snapshot: l.p.descripcion,
-      codigo_interno_snapshot: l.p.codigo_interno,
-      codigo_contable_snapshot: l.p.codigo_contable,
-      wo_id_inventario_snapshot: l.p.wo_id_inventario ?? null,
-      cantidad: l.cantidad,
-      valor_unitario: l.valor,
-      descuento_pct: desc,
-      total_linea: l.totalLinea,
-    }))
-  );
+  const pedidoId = creado.pedido_id;
+  const numero = String(creado.consecutivo);
 
   // 6) Camino crítico. Si n8n está configurado, delega allá (diseño del spec:
   //    el pedido nuevo dispara el flujo crearPedido en n8n). Si no, in-app.
@@ -261,19 +226,19 @@ export async function confirmarPedido(
     await fetch(n8nUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ pedido_id: pedido.id }),
+      body: JSON.stringify({ pedido_id: pedidoId }),
     }).catch(() => undefined);
     revalidatePath("/vendedor");
-    return { ok: true, pedidoId: pedido.id, numero: `${prefijo}-${numero}`, estado: "confirmado" };
+    return { ok: true, pedidoId: pedidoId, numero: `${prefijo}-${numero}`, estado: "confirmado" };
   }
 
-  const sync = await sincronizarPedidoWO(pedido.id);
-  await enviarNotificacionPedido(pedido.id).catch(() => undefined); // best-effort
+  const sync = await sincronizarPedidoWO(pedidoId);
+  await enviarNotificacionPedido(pedidoId).catch(() => undefined); // best-effort
 
   revalidatePath("/vendedor");
   return {
     ok: true,
-    pedidoId: pedido.id,
+    pedidoId: pedidoId,
     numero: `${prefijo}-${numero}`,
     numeroWo: sync.numero,
     estado: sync.estado,
