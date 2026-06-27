@@ -299,8 +299,13 @@ function TabClientes({ clientes }: { clientes: ClienteRow[] }) {
                     max={100}
                     step={0.5}
                     className="w-20 rounded-md border border-border px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-focus"
-                    value={desc[c.id]}
-                    onChange={(e) => setDesc({ ...desc, [c.id]: Number(e.target.value) })}
+                    value={desc[c.id] ?? Number(c.descuento_pct)}
+                    onChange={(e) =>
+                      setDesc({
+                        ...desc,
+                        [c.id]: Math.max(0, Math.min(100, Number(e.target.value))),
+                      })
+                    }
                   />
                   <span className="ml-1 text-ink-3">%</span>
                 </td>
@@ -343,7 +348,12 @@ function TabClientes({ clientes }: { clientes: ClienteRow[] }) {
               step={0.5}
               className={input}
               value={nuevo.descuento_pct}
-              onChange={(e) => setNuevo({ ...nuevo, descuento_pct: Number(e.target.value) })}
+              onChange={(e) =>
+                setNuevo({
+                  ...nuevo,
+                  descuento_pct: Math.max(0, Math.min(100, Number(e.target.value))),
+                })
+              }
             />
           </div>
           <Button onClick={crear} disabled={pending} className="w-full">

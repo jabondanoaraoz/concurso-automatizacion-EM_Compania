@@ -7,6 +7,9 @@ import {
   type EmpresaCfg,
 } from "./admin-panel";
 
+// Página autenticada por rol: nunca cachear el shell (evita servir HTML obsoleto).
+export const dynamic = "force-dynamic";
+
 export default async function AdminHome() {
   const supabase = await createClient();
 

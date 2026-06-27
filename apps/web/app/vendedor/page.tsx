@@ -1,6 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { Cotizador, type ClienteOpcion } from "./cotizador";
 
+// Página autenticada por rol: nunca cachear el shell (evita servir HTML obsoleto).
+export const dynamic = "force-dynamic";
+
 const cop = new Intl.NumberFormat("es-CO", {
   style: "currency",
   currency: "COP",
