@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import {
   buscarProductos,
@@ -39,16 +39,26 @@ export function Cotizador({ clientes }: { clientes: ClienteOpcion[] }) {
   const [buscando, startBuscar] = useTransition();
   const [pensando, startAgente] = useTransition();
   const [confirmando, startConfirmar] = useTransition();
+  const queryRef = useRef<HTMLInputElement>(null);
+
+  // Descuento siempre acotado a [0, 100] (evita totales negativos / >100%).
+  function clampDescuento(v: number): number {
+    if (!Number.isFinite(v)) return 0;
+    return Math.max(0, Math.min(100, v));
+  }
 
   function asistente() {
-    if (!query.trim()) return;
-    startAgente(async () => setSug(await sugerenciasAgente(query)));
+    // Lee el valor VIVO del input (no el del closure): evita el bug de
+    // "una consulta atrás" y funciona aunque el valor se haya seteado fuera de React.
+    const actual = (queryRef.current?.value ?? query).trim();
+    if (!actual) return;
+    startAgente(async () => setSug(await sugerenciasAgente(actual)));
   }
 
   function onCliente(id: string) {
     setClienteId(id);
     const c = clientes.find((x) => x.id === id);
-    setDescuento(c ? Number(c.descuento_pct) : 0);
+    setDescuento(clampDescuento(c ? Number(c.descuento_pct) : 0));
   }
 
   function onBuscar(q: string) {
@@ -77,15 +87,16 @@ export function Cotizador({ clientes }: { clientes: ClienteOpcion[] }) {
     setCarrito((prev) => prev.filter((l) => l.producto.id !== id));
   }
 
+  const descClamp = clampDescuento(descuento);
   const subtotal = carrito.reduce((s, l) => s + l.cantidad * Number(l.producto.precio_lista), 0);
-  const total = Math.round(subtotal * (1 - descuento / 100));
+  const total = Math.max(0, Math.round(subtotal * (1 - descClamp / 100)));
 
   function confirmar() {
     setResultado(null);
     startConfirmar(async () => {
       const r = await confirmarPedido({
         clienteId,
-        descuentoPct: descuento,
+        descuentoPct: descClamp,
         items: carrito.map((l) => ({ productoId: l.producto.id, cantidad: l.cantidad })),
       });
       setResultado(r);
@@ -97,7 +108,7 @@ export function Cotizador({ clientes }: { clientes: ClienteOpcion[] }) {
     });
   }
 
-  const puedeConfirmar = clienteId && carrito.length > 0 && !confirmando;
+  const puedeConfirmar = clienteId && carrito.length > 0 && total > 0 && !confirmando;
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -125,7 +136,7 @@ export function Cotizador({ clientes }: { clientes: ClienteOpcion[] }) {
             max={100}
             step={0.5}
             value={descuento}
-            onChange={(e) => setDescuento(Number(e.target.value))}
+            onChange={(e) => setDescuento(clampDescuento(Number(e.target.value)))}
             className="w-32 rounded-md border border-border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-focus"
           />
         </div>
@@ -136,6 +147,7 @@ export function Cotizador({ clientes }: { clientes: ClienteOpcion[] }) {
           </label>
           <div className="flex gap-2">
             <input
+              ref={queryRef}
               value={query}
               onChange={(e) => onBuscar(e.target.value)}
               placeholder='Ej: 0100012  ·  "sello 7/8 res corto"  ·  "cap 35 uf"'
@@ -217,6 +229,11 @@ export function Cotizador({ clientes }: { clientes: ClienteOpcion[] }) {
                     <p className="text-xs text-ink-3">
                       {l.producto.codigo_interno} · {cop.format(Number(l.producto.precio_lista))}
                     </p>
+                    {l.cantidad > l.producto.stock && (
+                      <p className="text-xs text-accent">
+                        Cantidad supera el stock disponible ({l.producto.stock}).
+                      </p>
+                    )}
                   </div>
                   <input
                     type="number"
