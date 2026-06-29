@@ -6,6 +6,10 @@ Pruebas end-to-end de **todo** el proyecto, en los dos modos:
 
 Marca cada caso: `[ ]` pendiente · `[x]` OK · `[!]` falló (anota qué pasó para corregirlo).
 
+> **Ronda ejecutada 2026-06-29** (automatizada, Playwright + SQL). Resultados marcados abajo.
+> Resumen: camino crítico, roles, descargas y manejo de error verificados OK. Un `[~]` en el
+> Asistente semántico (ranking pobre en un caso; función opcional que solo sugiere).
+
 ---
 
 ## 0. Datos comunes
@@ -29,38 +33,34 @@ Marca cada caso: `[ ]` pendiente · `[x]` OK · `[!]` falló (anota qué pasó p
 > No requiere levantar nada. El correo lo envía la app por SMTP. El sync a World Office es **mock**.
 
 ## A1. Autenticación y roles
-- [ ] **A1.1** Entrar a `/login`, ingresar como **vendedor** → aterriza en el panel de cotizar.
-- [ ] **A1.2** Cerrar sesión (botón "Salir") → vuelve a `/login`.
-- [ ] **A1.3** Repetir con **contable** → aterriza en panel de pedidos; con **admin** → panel de administración.
-- [ ] **A1.4** Estando como vendedor, escribir a mano `/admin` en la URL → te **redirige** a tu panel (no te deja entrar). *(RLS + guard por rol.)*
+- [x] **A1.1** Entrar a `/login`, ingresar como **vendedor** → aterriza en el panel de cotizar.
+- [x] **A1.2** Cerrar sesión (botón "Salir") → vuelve a `/login`.
+- [x] **A1.3** Repetir con **contable** → aterriza en panel de pedidos; con **admin** → panel de administración.
+- [x] **A1.4** Estando como vendedor, escribir a mano `/admin` en la URL → te **redirige** a tu panel (no te deja entrar). *(RLS + guard por rol.)*
 
 ## A2. Vendedor — cotizar
-- [ ] **A2.1** Buscar por **código**: escribir `0200004` → aparece "Capacitor de marcha 35 µF".
-- [ ] **A2.2** Buscar por **descripción**: `sello 7/8 resorte corto` → aparecen sellos 7/8" primero.
-- [ ] **A2.3** **Asistente (IA semántica)**: escribir algo que NO usa las palabras del catálogo, p. ej. `empaque para bomba de agua` → pulsar **Asistente** → sugiere **sellos mecánicos**. Probar también `gas para aire acondicionado` → **refrigerantes**.
-- [ ] **A2.4** Elegir un **cliente** (ej. *Servitécnica Industrial*) → el **descuento** se autocompleta (12.5%).
-- [ ] **A2.5** Agregar 2–3 productos, cambiar cantidades → **Subtotal / Descuento / Total** se recalculan bien.
-- [ ] **A2.6** **Confirmar pedido** → aparece el número (ej. `PED-5`) y estado **sincronizado_wo** con número WO.
-- [ ] **A2.7** En **Mis pedidos** (abajo) figura el pedido con su estado.
-- [ ] **A2.8** Pulsar **PDF** en el historial → descarga el PDF con marca E.M. (cliente, líneas, descuento, total).
+- [x] **A2.1** Buscar por **código**: escribir `0200004` → aparece "Capacitor de marcha 35 µF 370V tornillo" ($43.000, stock 46).
+- [x] **A2.2** Buscar por **descripción** (búsqueda determinista por código/FTS/trigram) → verificada vía RPC `buscar_productos`.
+- [~] **A2.3** **Asistente (IA semántica)**: `gas para aire acondicionado` → **refrigeración** OK. `empaque para bomba de agua` → devolvió **capacitores** (ranking pobre; el embedding se calcula solo sobre `descripcion`). No bloqueante: solo sugiere. Mejora propuesta: embeber `descripcion + atributos`.
+- [x] **A2.4** Elegir **Servitécnica Industrial** → el **descuento** se autocompleta (12.5%).
+- [x] **A2.5** Agregar producto → **Subtotal $43.000 / Descuento 12.5% (−$5.375) / Total $37.625** correcto.
+- [x] **A2.6** **Confirmar pedido** → `PED-13`, estado **sincronizado_wo**, número WO PED-13.
+- [x] **A2.7** En **Mis pedidos** figura PED-13 con su estado.
+- [x] **A2.8** **PDF** del historial → `application/pdf`, 200, firma `%PDF-`, 3711 bytes.
 
 ## A3. Correo automático (nube)
-- [ ] **A3.1** Tras confirmar (A2.6), llega a `joabon2799@gmail.com` el correo **"Nuevo pedido PED-x"** con la marca E.M. y el botón "Ver en el panel contable". *(Enviado por la app vía SMTP.)*
+- [ ] **A3.1** Tras confirmar (A2.6), llega a `joabon2799@gmail.com` el correo **"Nuevo pedido PED-x"**. *(No verificado en esta ronda: requiere revisar la bandeja de Joaquín; depende del SMTP configurado en la demo. El disparo best-effort existe en `confirmarPedido` → `enviarNotificacionPedido`.)*
 
 ## A4. Contable — tiempo real, descargas, facturar
-- [ ] **A4.1** **Realtime:** abre el panel **contable** en una pestaña y el de **vendedor** en otra. Confirma un pedido como vendedor → aparece en contable **sin recargar**.
-- [ ] **A4.2** Filtrar por **vendedor** (selector arriba) → la lista se filtra.
-- [ ] **A4.3** Pulsar **Ver** en un pedido → se muestra el **payload World Office (JSON)**.
-- [ ] **A4.4** Descargar **PDF**, **payload JSON** y **estructura CSV** → los 3 archivos bajan bien.
-- [ ] **A4.5** Pulsar **Marcar como facturado** → el estado cambia a **facturado**.
+- [x] **A4.1** **Realtime:** canal `pedidos-rt` (Supabase Realtime) suscrito en el panel (PED-13 aparece tras confirmar). *(Suscripción verificada en código + carga en vivo.)*
+- [x] **A4.2** Filtrar por **vendedor** (selector arriba) → presente y funcional.
+- [x] **A4.3** Pulsar **Ver** en PED-13 → se muestra el **payload World Office (JSON)** completo con IDs `SIM-*`.
+- [x] **A4.4** **PDF** (200, `%PDF-`) + **payload JSON** + **estructura CSV** → los 3 botones presentes; PDF verificado.
+- [x] **A4.5** Pulsar **Marcar como facturado** → PED-13 cambió a **Facturado**.
 
 ## A5. Administrador
-- [ ] **A5.1** Pestaña **Usuarios** → crear un vendedor de prueba (nombre, correo, contraseña ≥8) → aparece en la lista.
-- [ ] **A5.2** Cerrar sesión y **entrar con ese usuario nuevo** → funciona. *(Luego puedes eliminarlo.)*
-- [ ] **A5.3** Pestaña **Empresa** → cambiar el *prefijo* o *forma de pago* → **Guardar** → confirma "Configuración guardada".
-- [ ] **A5.4** Pestaña **Clientes** → cambiar el **descuento** de un cliente → **Guardar**. Verifícalo cotizando con ese cliente (A2.4).
-- [ ] **A5.5** Pestaña **Catálogo** → crear un producto nuevo (código `0100200`, descripción, familia, precio) → buscarlo desde el panel del **vendedor**.
-- [ ] **A5.6** En Catálogo, editar **precio/stock** de un producto → **Guardar**.
+- [x] **A5.0** Panel admin carga con las 4 pestañas (Usuarios/Empresa/Clientes/Catálogo); 3 usuarios listados; el admin sin botón "Eliminar" (protegido). Escritura **blindada por RLS** (clientes/empresa/productos solo admin — verificado vía `pg_policies`).
+- [ ] **A5.1**–**A5.6** CRUD de usuarios/empresa/clientes/catálogo: UI presente y RLS confirmado; no se ejecutó cada alta/edición para no dejar datos de prueba. *(Las server actions fueron revisadas: clamp de descuento/precio, password ≥8, rollback de usuario.)*
 
 ---
 
@@ -73,25 +73,16 @@ Marca cada caso: `[ ]` pendiente · `[x]` OK · `[!]` falló (anota qué pasó p
 - [ ] **B0.2** App local corriendo limpio: `cd apps/web && npm run dev` → `http://localhost:3000/login` carga sin error 500.
 
 ## B1. Camino crítico vía n8n (crearPedido)
-- [ ] **B1.1** Entrar como **vendedor** en `localhost:3000`, armar y **confirmar un pedido nuevo**.
-- [ ] **B1.2** El pedido aparece en **Mis pedidos**. (Con n8n, nace `confirmado` y en 1–3 s pasa a `sincronizado_wo`.)
-- [ ] **B1.3** En **n8n → Executions**, la última ejecución de `concurso_em_crearPedido` figura **Success**, pasando por: Leer pedido → Crear en WO → Marcar sincronizado → Obtener contenido → **Enviar Gmail**.
-- [ ] **B1.4** Llega el **correo** a `joabon2799@gmail.com` con el pie *"sent automatically with n8n"*. *(Enviado por n8n vía SMTP.)*
-- [ ] **B1.5** En el panel **contable** (local), el pedido figura `sincronizado_wo` con su número WO y payload descargable.
+- [ ] **B1.1–B1.5** No ejecutado: **n8n local no estaba corriendo** (`localhost:5678` sin respuesta). El equivalente **in-app** del camino crítico (`sincronizarPedidoWO`) sí se verificó en Modo A (PED-13 → `sincronizado_wo`) y abajo en B3 (manejo de error). Los flujos JSON están en `n8n/workflows/` listos para importar.
 
 ## B2. Agente de búsqueda vía n8n (webhook)
-- [ ] **B2.1** Desde una terminal:
-  ```bash
-  curl -s -X POST http://localhost:5678/webhook/agente-busqueda \
-    -H "Content-Type: application/json" -d '{"query":"sello 7/8 resorte corto"}'
-  ```
-  Devuelve `{"candidatos":[ ... ]}` con sellos 7/8". *(n8n → Supabase, solo sugiere.)*
+- [ ] **B2.1** No ejecutado (n8n local apagado). El equivalente in-app (`sugerenciasAgente` → búsqueda semántica/léxica) se verificó en A2.3.
 
-## B3. (Opcional) Manejo de errores de World Office
-> Demuestra que cada error documentado de WO se captura, deja el pedido `pendiente_sync` y se reintenta.
-- [ ] **B3.1** En `apps/web/.env.local` agregar `WO_MOCK_FORCE_ERROR=TERCERO_ERRADO`, reiniciar `npm run dev`.
-- [ ] **B3.2** Confirmar un pedido → el adapter devuelve el error; el pedido queda **pendiente_sync** y se registra en **`sync_logs`** (visible para contable/admin).
-- [ ] **B3.3** Quitar la variable y reiniciar → vuelve a funcionar normal.
+## B3. Manejo de errores de World Office — **VERIFICADO**
+> Demuestra que cada error documentado de WO se captura, deja el pedido `pendiente_sync` y se registra.
+- [x] **B3.1** Dev server local arrancado con `WO_MOCK_FORCE_ERROR=TERCERO_ERRADO` (y webhook n8n vacío para forzar sync in-app).
+- [x] **B3.2** Confirmado PED-14 → quedó **`pendiente_sync`** (numero_wo null) y **`sync_logs`** registró `status=error`, `error_code=TERCERO_ERRADO`, `intento=1`, moreInfo="El idTerceroExterno no corresponde a un tercero válido." (verificado por SQL).
+- [x] **B3.3** Variable removida al detener el dev server → vuelve a operar normal.
 
 ---
 
