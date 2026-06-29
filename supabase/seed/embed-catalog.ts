@@ -1,6 +1,8 @@
-// Calcula embeddings (OpenAI text-embedding-3-small, 1536-dim) de las
-// descripciones del catálogo y los guarda en productos.embedding (sección 6).
-// Self-contained: solo fetch + REST de Supabase. No requiere node_modules.
+// Calcula embeddings (OpenAI text-embedding-3-small, 1536-dim) del catálogo y los
+// guarda en productos.embedding (sección 6). Embebe descripción + familia +
+// valores de atributos (jsonb), para que términos como la aplicación ("bomba
+// centrífuga") —que viven en atributos y no en la descripción— pesen en la
+// búsqueda semántica. Self-contained: solo fetch + REST de Supabase.
 //
 // Uso (desde la raíz del repo):
 //   node --env-file=apps/web/.env.local supabase/seed/embed-catalog.ts
@@ -35,17 +37,48 @@ function chunk<T>(arr: T[], n: number): T[][] {
   return out;
 }
 
-// 1) Traer productos.
-const resp = await fetch(`${SB}/rest/v1/productos?select=id,descripcion&order=codigo_interno`, {
-  headers: sbHeaders,
-});
-const productos = (await resp.json()) as { id: string; descripcion: string }[];
+type Producto = {
+  id: string;
+  descripcion: string;
+  familia: string;
+  atributos: Record<string, unknown> | null;
+};
+
+const FAMILIA_LABEL: Record<string, string> = {
+  sello_mecanico: "sello mecánico",
+  capacitor: "capacitor",
+  refrigeracion: "refrigeración",
+};
+
+// Aplana recursivamente los valores de atributos (incluye specs anidados).
+function valoresAtributos(obj: unknown, acc: string[] = []): string[] {
+  if (obj && typeof obj === "object") {
+    for (const v of Object.values(obj as Record<string, unknown>)) valoresAtributos(v, acc);
+  } else if (obj != null && obj !== "") {
+    acc.push(String(obj));
+  }
+  return acc;
+}
+
+// Texto a embeber: descripción + familia legible + valores de atributos.
+function textoEmbedding(p: Producto): string {
+  const familia = FAMILIA_LABEL[p.familia] ?? p.familia;
+  const attrs = valoresAtributos(p.atributos).join(" ");
+  return `${p.descripcion}. ${familia}. ${attrs}`.trim();
+}
+
+// 1) Traer productos (con familia y atributos).
+const resp = await fetch(
+  `${SB}/rest/v1/productos?select=id,descripcion,familia,atributos&order=codigo_interno`,
+  { headers: sbHeaders }
+);
+const productos = (await resp.json()) as Producto[];
 console.log(`Productos: ${productos.length}`);
 
 // 2) Embeber por lotes y actualizar.
 let hechos = 0;
 for (const lote of chunk(productos, 100)) {
-  const embs = await embed(lote.map((p) => p.descripcion));
+  const embs = await embed(lote.map((p) => textoEmbedding(p)));
   await Promise.all(
     lote.map((p, i) =>
       fetch(`${SB}/rest/v1/productos?id=eq.${p.id}`, {
