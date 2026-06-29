@@ -7,9 +7,9 @@
 ## Resumen ejecutivo
 La plataforma cumple los requerimientos del concurso. El núcleo determinista (integración
 World Office) está cubierto por **31 tests automatizados** y verificado en vivo end-to-end
-(cotizar → confirmar → payload WO → estados → manejo de error). El único punto ⚠ es la
-**calidad del ranking** de la búsqueda semántica (función opcional que solo sugiere); la
-búsqueda determinista —la garantizada— funciona perfecta.
+(cotizar → confirmar → payload WO → estados → manejo de error). La búsqueda semántica
+(opcional, solo sugiere) se mejoró embebiendo `descripcion + familia + atributos` y ahora
+acierta la familia correcta en las consultas naturales probadas.
 
 ## Reglas no negociables (sección 0)
 | # | Regla | Estado | Evidencia |
@@ -44,7 +44,7 @@ búsqueda determinista —la garantizada— funciona perfecta.
 | Requerimiento | Estado | Evidencia |
 |---|---|---|
 | Búsqueda determinista (código exacto > FTS > trigram) | ✓ | RPC `buscar_productos`; verificado: `0200004` → capacitor correcto. |
-| Agente semántico opcional (solo sugiere) | ⚠ | Pipeline activo (embeddings presentes). `gas para aire acondicionado` → refrigeración ✓. `empaque para bomba de agua` → capacitores (ranking pobre): el embedding se calcula solo sobre `descripcion`, que no incluye la aplicación ("bomba"). No bloquea: solo sugiere y la búsqueda determinista cubre el caso. Mejora propuesta: embeber `descripcion + atributos`. |
+| Agente semántico opcional (solo sugiere) | ✓ | Embeddings sobre `descripcion + familia + atributos` (`embed-catalog.ts`). Verificado: `empaque para bomba de agua` → sellos mecánicos; `gas para aire acondicionado` → refrigerantes; `arranque de motor de nevera` → motores. |
 
 ## Entregables (secciones 10, 16, 17, 19)
 | Entregable | Estado | Evidencia |

@@ -7,8 +7,8 @@ Pruebas end-to-end de **todo** el proyecto, en los dos modos:
 Marca cada caso: `[ ]` pendiente · `[x]` OK · `[!]` falló (anota qué pasó para corregirlo).
 
 > **Ronda ejecutada 2026-06-29** (automatizada, Playwright + SQL). Resultados marcados abajo.
-> Resumen: camino crítico, roles, descargas y manejo de error verificados OK. Un `[~]` en el
-> Asistente semántico (ranking pobre en un caso; función opcional que solo sugiere).
+> Resumen: camino crítico, roles, descargas, manejo de error y búsqueda semántica (tras
+> re-embeber el catálogo con atributos) verificados OK.
 
 ---
 
@@ -41,7 +41,7 @@ Marca cada caso: `[ ]` pendiente · `[x]` OK · `[!]` falló (anota qué pasó p
 ## A2. Vendedor — cotizar
 - [x] **A2.1** Buscar por **código**: escribir `0200004` → aparece "Capacitor de marcha 35 µF 370V tornillo" ($43.000, stock 46).
 - [x] **A2.2** Buscar por **descripción** (búsqueda determinista por código/FTS/trigram) → verificada vía RPC `buscar_productos`.
-- [~] **A2.3** **Asistente (IA semántica)**: `gas para aire acondicionado` → **refrigeración** OK. `empaque para bomba de agua` → devolvió **capacitores** (ranking pobre; el embedding se calcula solo sobre `descripcion`). No bloqueante: solo sugiere. Mejora propuesta: embeber `descripcion + atributos`.
+- [x] **A2.3** **Asistente (IA semántica)**: tras re-embeber el catálogo con `descripcion + familia + atributos`: `empaque para bomba de agua` → **sellos mecánicos** ✓; `gas para aire acondicionado` → **refrigerantes** ✓; `arranque de motor de nevera` → **motores** ✓.
 - [x] **A2.4** Elegir **Servitécnica Industrial** → el **descuento** se autocompleta (12.5%).
 - [x] **A2.5** Agregar producto → **Subtotal $43.000 / Descuento 12.5% (−$5.375) / Total $37.625** correcto.
 - [x] **A2.6** **Confirmar pedido** → `PED-13`, estado **sincronizado_wo**, número WO PED-13.
