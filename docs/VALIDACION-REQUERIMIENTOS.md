@@ -44,7 +44,7 @@ acierta la familia correcta en las consultas naturales probadas.
 | Requerimiento | Estado | Evidencia |
 |---|---|---|
 | Búsqueda determinista (código exacto > FTS > trigram) | ✓ | RPC `buscar_productos`; verificado: `0200004` → capacitor correcto. |
-| Agente semántico opcional (solo sugiere) | ✓ | Embeddings sobre `descripcion + familia + atributos` (`embed-catalog.ts`). Verificado: `empaque para bomba de agua` → sellos mecánicos; `gas para aire acondicionado` → refrigerantes; `arranque de motor de nevera` → motores. |
+| Agente semántico opcional (solo sugiere) | ✓ (nota) | Embeddings sobre `descripcion + familia + atributos` (`embed-catalog.ts`). Verificado por RPC directa contra la DB: `empaque para bomba de agua` → sellos; `gas para aire acondicionado` → refrigerantes; `arranque de motor de nevera` → motores. En la **demo** la rama semántica responde bien para la mayoría de consultas (`sello…`, `capacitor`, `gas…`), pero algunas (las que contienen "empaque") caen a léxica porque `embedQuery` devuelve null en el runtime de Vercel (la misma cadena+key funciona en local). `embedQuery` se endureció (timeout + reintento + `no-store` + logging); causa raíz pendiente de confirmar con los logs de la función. No bloqueante: el agente solo sugiere y la búsqueda determinista cubre el caso. |
 
 ## Entregables (secciones 10, 16, 17, 19)
 | Entregable | Estado | Evidencia |
