@@ -8,8 +8,16 @@ import { getAdapter } from "@/lib/worldoffice/adapter";
 import type { WOPedidoPayload } from "@/lib/worldoffice/types";
 
 export async function POST(req: Request) {
+  // Fail-closed: sin secreto configurado, el endpoint no opera (evita quedar
+  // abierto en un deploy mal configurado). El camino in-app no usa este endpoint.
   const secreto = process.env.N8N_SHARED_SECRET;
-  if (secreto && req.headers.get("x-n8n-secret") !== secreto) {
+  if (!secreto) {
+    return NextResponse.json(
+      { ok: false, error: "Endpoint no configurado (falta N8N_SHARED_SECRET)." },
+      { status: 503 }
+    );
+  }
+  if (req.headers.get("x-n8n-secret") !== secreto) {
     return NextResponse.json({ ok: false, error: "No autorizado." }, { status: 401 });
   }
 

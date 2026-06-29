@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { buildWOPayload, type PedidoWOInput } from "@/lib/worldoffice/mapping";
+import { buildWOPayload, validateWOPayload, type PedidoWOInput } from "@/lib/worldoffice/mapping";
+import { WOValidationError } from "@/lib/worldoffice/errors";
 import { sincronizarPedidoWO } from "@/lib/pedidos/sync";
 import { enviarNotificacionPedido } from "@/lib/notificaciones/email";
 import { interpretarConsulta } from "@/lib/agente/interpretar";
@@ -183,6 +184,18 @@ export async function confirmarPedido(
     })),
   };
   const payload = buildWOPayload(woInput, WO_MODE);
+
+  // Defensa en profundidad: validar el payload server-side antes de persistir
+  // (el adapter vuelve a validar antes del POST a WO). El `numero` real lo pone
+  // la RPC atómica; validamos con un placeholder para no bloquear por el
+  // consecutivo aún no asignado.
+  try {
+    validateWOPayload({ ...payload, numero: "PENDIENTE" });
+  } catch (e) {
+    if (e instanceof WOValidationError)
+      return { ok: false, error: `Payload inválido (${e.code}): ${e.message}` };
+    throw e;
+  }
 
   // Snapshots inmutables de cada línea para la función atómica.
   const itemsSnapshot = lineas.map((l) => ({
