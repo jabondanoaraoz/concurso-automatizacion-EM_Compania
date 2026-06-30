@@ -61,8 +61,9 @@ export function Cotizador({ clientes }: { clientes: ClienteOpcion[] }) {
     setSug(null);
     startAgente(async () => setSug(await sugerenciasAgente(actual)));
     // Asegura que el panel quede a la vista (puede estar bajo el fold).
+    // Scroll instantáneo: el suave es un no-op en algunos entornos de Chrome.
     requestAnimationFrame(() =>
-      sugRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" })
+      sugRef.current?.scrollIntoView({ block: "nearest" })
     );
   }
 

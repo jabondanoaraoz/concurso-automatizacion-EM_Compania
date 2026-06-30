@@ -42,7 +42,9 @@ export function Instructivo({
     const titulo = Array.from(cont.querySelectorAll("h2, h3")).find((el) =>
       el.textContent?.toLowerCase().includes(etiqueta)
     );
-    titulo?.scrollIntoView({ behavior: "smooth", block: "start" });
+    // Instantáneo a propósito: el scroll suave es un no-op en algunos entornos
+    // (Chrome con animaciones de scroll desactivadas); así funciona siempre.
+    titulo?.scrollIntoView({ block: "start" });
   }
 
   return (
