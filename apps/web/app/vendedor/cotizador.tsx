@@ -40,6 +40,7 @@ export function Cotizador({ clientes }: { clientes: ClienteOpcion[] }) {
   const [pensando, startAgente] = useTransition();
   const [confirmando, startConfirmar] = useTransition();
   const queryRef = useRef<HTMLInputElement>(null);
+  const sugRef = useRef<HTMLDivElement>(null);
 
   // Descuento siempre acotado a [0, 100] (evita totales negativos / >100%).
   function clampDescuento(v: number): number {
@@ -51,8 +52,18 @@ export function Cotizador({ clientes }: { clientes: ClienteOpcion[] }) {
     // Lee el valor VIVO del input (no el del closure): evita el bug de
     // "una consulta atrás" y funciona aunque el valor se haya seteado fuera de React.
     const actual = (queryRef.current?.value ?? query).trim();
-    if (!actual) return;
+    if (!actual) {
+      // Feedback explícito: si no hay texto, lleva el foco al buscador en vez
+      // de "no hacer nada" (la queja del jurado fue "no me abrió nada").
+      queryRef.current?.focus();
+      return;
+    }
+    setSug(null);
     startAgente(async () => setSug(await sugerenciasAgente(actual)));
+    // Asegura que el panel quede a la vista (puede estar bajo el fold).
+    requestAnimationFrame(() =>
+      sugRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" })
+    );
   }
 
   function onCliente(id: string) {
@@ -153,10 +164,14 @@ export function Cotizador({ clientes }: { clientes: ClienteOpcion[] }) {
               placeholder='Ej: 0100012  ·  "sello 7/8 res corto"  ·  "cap 35 uf"'
               className="w-full rounded-md border border-border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-focus"
             />
-            <Button variant="outline" onClick={asistente} disabled={pensando || !query.trim()}>
+            <Button variant="outline" onClick={asistente} disabled={pensando}>
               {pensando ? "…" : "Asistente"}
             </Button>
           </div>
+          <p className="mt-2 text-xs text-ink-3">
+            ¿No aparece lo que buscas? Escríbelo en lenguaje natural (ej. «cap 35 uf»,
+            «empaque puerta nevera») y pulsa <strong>Asistente</strong>.
+          </p>
           <div className="mt-3 max-h-80 divide-y divide-border overflow-auto">
             {buscando && <p className="py-2 text-sm text-ink-3">Buscando…</p>}
             {!buscando && query && resultados.length === 0 && (
@@ -178,22 +193,29 @@ export function Cotizador({ clientes }: { clientes: ClienteOpcion[] }) {
           </div>
         </div>
 
-        {sug && (
-          <div className="rounded-xl border border-accent/40 bg-white p-4">
+        {(pensando || sug) && (
+          <div ref={sugRef} className="rounded-xl border border-accent/40 bg-white p-4">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-medium text-accent">Sugerencias del asistente</h3>
-              <button onClick={() => setSug(null)} className="text-ink-3 hover:text-accent" aria-label="Cerrar">
-                ✕
-              </button>
+              {!pensando && (
+                <button onClick={() => setSug(null)} className="text-ink-3 hover:text-accent" aria-label="Cerrar">
+                  ✕
+                </button>
+              )}
             </div>
-            {sug.interpretado && (
+            {pensando ? (
+              <p className="mt-2 py-2 text-sm text-ink-3">Interpretando tu consulta…</p>
+            ) : sug?.interpretado ? (
               <p className="mt-1 text-xs text-ink-3">
                 Interpreté tu consulta como: <span className="text-ink-2">“{sug.interpretado}”</span>
               </p>
-            )}
+            ) : null}
+            {!pensando && sug && (
             <div className="mt-2 max-h-72 divide-y divide-border overflow-auto">
               {sug.candidatos.length === 0 ? (
-                <p className="py-2 text-sm text-ink-3">Sin sugerencias.</p>
+                <p className="py-2 text-sm text-ink-3">
+                  No encontré sugerencias. Prueba con otras palabras (más generales) o busca por código.
+                </p>
               ) : (
                 sug.candidatos.map((p) => (
                   <div key={p.id} className="flex items-center justify-between gap-3 py-2">
@@ -210,6 +232,7 @@ export function Cotizador({ clientes }: { clientes: ClienteOpcion[] }) {
                 ))
               )}
             </div>
+            )}
           </div>
         )}
       </section>
