@@ -29,3 +29,32 @@ body {
 h1, h2, h3, h4 {
   font-family: var(--font-outfit), system-ui, sans-serif;
 }
+
+/* Instructivo (Ayuda): render de markdown con la marca E.M. */
+.instructivo h1 { font-size: 1.5rem; font-weight: 600; margin: 0 0 .5rem; }
+.instructivo h2 { font-size: 1.2rem; font-weight: 600; margin: 1.5rem 0 .5rem; padding-top: .5rem; border-top: 1px solid var(--em-border); }
+.instructivo h3 { font-size: 1.05rem; font-weight: 600; margin: 1rem 0 .35rem; }
+.instructivo p { margin: .5rem 0; line-height: 1.6; color: var(--em-text); }
+.instructivo ul, .instructivo ol { margin: .5rem 0 .5rem 1.25rem; }
+.instructivo ul { list-style: disc; }
+.instructivo ol { list-style: decimal; }
+.instructivo li { margin: .25rem 0; line-height: 1.55; }
+.instructivo a { color: var(--em-accent); text-decoration: underline; }
+.instructivo code { background: var(--em-bg-2); padding: .1rem .3rem; border-radius: 4px; font-size: .85em; }
+.instructivo pre { background: var(--em-bg-2); padding: .75rem; border-radius: 8px; overflow: auto; margin: .75rem 0; }
+.instructivo pre code { background: transparent; padding: 0; }
+.instructivo blockquote { border-left: 3px solid var(--em-accent); padding-left: .75rem; color: var(--em-text-2); margin: .75rem 0; }
+.instructivo table { width: 100%; border-collapse: collapse; margin: .75rem 0; font-size: .9rem; }
+.instructivo th, .instructivo td { border: 1px solid var(--em-border); padding: .4rem .55rem; text-align: left; vertical-align: top; }
+.instructivo th { background: var(--em-bg-2); }
+.instructivo hr { border: 0; border-top: 1px solid var(--em-border); margin: 1rem 0; }
+.instructivo strong { font-weight: 600; }
+
+/* Impresión / "Descargar PDF": solo el documento, sin el cromo de la app. */
+@media print {
+  .no-print { display: none !important; }
+  header { display: none !important; }
+  main { max-width: none !important; padding: 0 !important; }
+  .instructivo { border: 0 !important; padding: 0 !important; }
+  body { background: #fff !important; }
+}

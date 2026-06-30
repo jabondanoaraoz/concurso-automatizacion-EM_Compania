@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { cerrarSesion } from "@/app/actions";
 import { Button } from "@/components/ui/button";
 import type { Perfil } from "@/lib/auth";
@@ -28,6 +29,9 @@ export function PanelShell({
             </span>
           </div>
           <div className="flex items-center gap-4">
+            <Link href="/ayuda" className="text-sm text-ink-2 hover:text-accent">
+              Ayuda
+            </Link>
             <span className="text-sm text-ink-2">{perfil.nombre}</span>
             <form action={cerrarSesion}>
               <Button variant="outline" size="sm" type="submit">
