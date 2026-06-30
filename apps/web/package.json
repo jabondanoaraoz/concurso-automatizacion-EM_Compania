@@ -9,7 +9,8 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "gen:instructivo": "node scripts/gen-instructivo.mjs"
+    "gen:instructivo": "node scripts/gen-instructivo.mjs",
+    "gen:pdf": "node scripts/gen-pdf.mjs"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.5.1",

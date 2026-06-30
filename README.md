@@ -126,3 +126,6 @@ búsqueda determinista (código/descripción) cubre el caso. No bloqueante.
 - [`docs/GUIA-PRUEBAS.md`](docs/GUIA-PRUEBAS.md) — guía de pruebas E2E con resultados de la última ronda.
 - [`docs/VALIDACION-REQUERIMIENTOS.md`](docs/VALIDACION-REQUERIMIENTOS.md) — matriz de trazabilidad spec → implementación.
 - [`n8n/README.md`](n8n/README.md) — import y wiring de los flujos.
+- [`docs/pdf/`](docs/pdf/) — versiones en **PDF** (marca E.M.) del manual de uso y del plan de
+  integración World Office, para enviar sin abrir la app. Se regeneran con `npm run gen:pdf`
+  (desde `apps/web`) a partir de los mismos `docs/*.md`.
