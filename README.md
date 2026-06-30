@@ -58,6 +58,10 @@ cd apps/web
 npm install
 cp ../../.env.example .env.local   # completar las variables (ver abajo)
 npm run dev                        # http://localhost:3000
+
+npm run test        # 31 tests del núcleo World Office (vitest)
+npm run typecheck   # tsc --noEmit
+npm run build       # build de producción
 ```
 
 Login por rol (usuarios de demostración; contraseñas las entrega el administrador):
@@ -90,9 +94,32 @@ Opcionales: `COMPOSIO_API_KEY` (envío de correo autónomo desde la app),
 
 Pasar a producción: `WO_MODE=live` + IDs reconciliados + `refreshToken` activo. **Nada más.**
 
+## Estado de validación
+
+Ronda de validación integral (2026-06-29) — detalle en
+[`docs/VALIDACION-REQUERIMIENTOS.md`](docs/VALIDACION-REQUERIMIENTOS.md) y
+[`docs/GUIA-PRUEBAS.md`](docs/GUIA-PRUEBAS.md).
+
+| Área | Estado |
+|---|---|
+| Estática (typecheck · build · lint) | ✅ verde |
+| Tests automatizados (vitest, núcleo WO: mapeo, validación, idempotencia, errores) | ✅ 31 tests |
+| Base de datos (9 tablas + RLS, 150 SKUs con embeddings, RLS de escritura por rol) | ✅ verificado |
+| E2E en vivo (login 3 roles, guard de rol, cotizar→confirmar, PDF, contable, facturar) | ✅ |
+| Manejo de error WO (pedido→`pendiente_sync` + `sync_logs`) | ✅ verificado |
+| Matriz de requerimientos vs Build Spec | ✅ sin faltantes |
+| Búsqueda semántica (embeddings sobre descripción + familia + atributos) | ✅ con 1 nota* |
+
+\* La búsqueda semántica (opcional, **solo sugiere**) responde bien para la mayoría de consultas;
+algunas (las que contienen "empaque") caen a la búsqueda léxica en la demo por un fallo de
+`embedQuery` en el runtime de Vercel — documentado en `docs/VALIDACION-REQUERIMIENTOS.md`. La
+búsqueda determinista (código/descripción) cubre el caso. No bloqueante.
+
 ## Documentos
 
 - [`docs/integracion-world-office.md`](docs/integracion-world-office.md) — plan de integración API (el que más pesa).
 - [`docs/manual-onboarding.md`](docs/manual-onboarding.md) — guía de uso para E.M. (no técnica).
 - [`docs/PREGUNTAS-CLIENTE.md`](docs/PREGUNTAS-CLIENTE.md) — supuestos abiertos a confirmar con WO/E.M.
+- [`docs/GUIA-PRUEBAS.md`](docs/GUIA-PRUEBAS.md) — guía de pruebas E2E con resultados de la última ronda.
+- [`docs/VALIDACION-REQUERIMIENTOS.md`](docs/VALIDACION-REQUERIMIENTOS.md) — matriz de trazabilidad spec → implementación.
 - [`n8n/README.md`](n8n/README.md) — import y wiring de los flujos.
