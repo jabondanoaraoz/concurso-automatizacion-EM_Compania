@@ -26,6 +26,8 @@ facturar con un clic.
 - **Notificación por correo** (Gmail vía Composio) al confirmar pedido — *envío real verificado*.
 - **Flujos n8n** del camino crítico (con reintentos e idempotencia) + agente + refresh de token.
 - **Agente de búsqueda** ("Asistente") que reinterpreta consultas ambiguas — **solo sugiere**.
+- **Instructivo dentro de la app** (menú **Ayuda**): manual de uso para los 3 roles + documentación
+  técnica de World Office (solo admin), con descarga a PDF. Se genera desde los mismos `docs/*.md`.
 
 ## Stack
 
@@ -117,6 +119,7 @@ búsqueda determinista (código/descripción) cubre el caso. No bloqueante.
 
 ## Documentos
 
+- [`docs/GUION-DEMO.md`](docs/GUION-DEMO.md) — guion de demo + respuestas punto por punto al feedback del jurado.
 - [`docs/integracion-world-office.md`](docs/integracion-world-office.md) — plan de integración API (el que más pesa).
 - [`docs/manual-onboarding.md`](docs/manual-onboarding.md) — guía de uso para E.M. (no técnica).
 - [`docs/PREGUNTAS-CLIENTE.md`](docs/PREGUNTAS-CLIENTE.md) — supuestos abiertos a confirmar con WO/E.M.
