@@ -96,6 +96,9 @@ export interface ConfirmarResultado {
   numero?: string;
   numeroWo?: string;
   estado?: string;
+  // Estado de la notificación por correo a contabilidad (para mostrarlo en la UI
+  // y que no parezca simulado). "n8n" = el correo lo dispara el flujo de n8n.
+  correo?: "enviado" | "omitido" | "error" | "n8n";
 }
 
 // Confirma un pedido: crea cotización + pedido + items con SNAPSHOTS, reserva
@@ -242,11 +245,25 @@ export async function confirmarPedido(
       body: JSON.stringify({ pedido_id: pedidoId }),
     }).catch(() => undefined);
     revalidatePath("/vendedor");
-    return { ok: true, pedidoId: pedidoId, numero: `${prefijo}-${numero}`, estado: "confirmado" };
+    return {
+      ok: true,
+      pedidoId: pedidoId,
+      numero: `${prefijo}-${numero}`,
+      estado: "confirmado",
+      correo: "n8n",
+    };
   }
 
   const sync = await sincronizarPedidoWO(pedidoId);
-  await enviarNotificacionPedido(pedidoId).catch(() => undefined); // best-effort
+  // best-effort: nunca rompe el flujo, pero reportamos el resultado a la UI.
+  const notif = await enviarNotificacionPedido(pedidoId).catch(() => ({
+    ok: false as const,
+  }));
+  const correo: ConfirmarResultado["correo"] = notif.ok
+    ? "enviado"
+    : "skipped" in notif && notif.skipped
+      ? "omitido"
+      : "error";
 
   revalidatePath("/vendedor");
   return {
@@ -255,5 +272,6 @@ export async function confirmarPedido(
     numero: `${prefijo}-${numero}`,
     numeroWo: sync.numero,
     estado: sync.estado,
+    correo,
   };
 }

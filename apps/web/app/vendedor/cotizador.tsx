@@ -313,6 +313,18 @@ export function Cotizador({ clientes }: { clientes: ClienteOpcion[] }) {
                   Estado WO: <strong>{resultado.estado}</strong>
                   {resultado.numeroWo ? ` · número WO ${resultado.numeroWo}` : ""}
                 </p>
+                {resultado.correo === "enviado" && (
+                  <p className="mt-1 text-ink-2">✓ Notificación enviada a contabilidad por correo.</p>
+                )}
+                {resultado.correo === "n8n" && (
+                  <p className="mt-1 text-ink-2">✓ Notificación a contabilidad en curso (flujo n8n).</p>
+                )}
+                {resultado.correo === "omitido" && (
+                  <p className="mt-1 text-ink-3">Notificación por correo no activa en este entorno.</p>
+                )}
+                {resultado.correo === "error" && (
+                  <p className="mt-1 text-ink-3">No se pudo enviar la notificación por correo.</p>
+                )}
               </>
             ) : (
               <p className="text-accent">{resultado.error}</p>
